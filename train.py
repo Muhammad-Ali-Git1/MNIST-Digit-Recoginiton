@@ -5,27 +5,18 @@ import joblib
 import numpy as np
 import cv2
 
-# ── Load data ──────────────────────────────────────────
 mnist = fetch_openml('mnist_784', version=1, as_frame=False)
 
 X = mnist.data
 y = mnist.target.astype(int)
 
-# ── Preprocessing function (must match Streamlit app) ──
 def preprocess(img_flat):
     img = img_flat.reshape(28, 28).astype(np.float32)
-
-    # normalize
     img = img / 255.0
-
-    # invert only if background is white
     if img.mean() > 0.5:
         img = 1 - img
-
-    # threshold to remove noise
     img = (img > 0.2).astype(np.float32)
 
-    # center the digit
     coords = cv2.findNonZero((img * 255).astype(np.uint8))
     if coords is not None:
         x, y_coord, w, h = cv2.boundingRect(coords)
@@ -34,26 +25,15 @@ def preprocess(img_flat):
         img   = cv2.resize(digit, (28, 28))
 
     return img.flatten()
-
-# ── Apply preprocessing to all images ──────────────────
 print("Preprocessing images... (takes ~1 minute)")
 X = np.array([preprocess(x) for x in X])
 print("Done!")
 
-# ── Split ──────────────────────────────────────────────
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
 
-# ── Train ──────────────────────────────────────────────
-ml = MLPClassifier(
-    hidden_layer_sizes=(128, 64),
-    activation='relu',
-    max_iter=50,
-    verbose=True
-)
+ml = MLPClassifier(hidden_layer_sizes=(128, 64),activation='relu',max_iter=50,verbose=True)
 ml.fit(X_train, y_train)
-
-# ── Save ───────────────────────────────────────────────
 joblib.dump(ml, "digit_model.pkl")
 print("Model saved successfully!")
